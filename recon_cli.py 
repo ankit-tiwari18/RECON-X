@@ -1,0 +1,35 @@
+import nmap
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+from rich.progress import Progress
+
+console = Console()
+
+def terminal_scan(target):
+    console.print(Panel.fit("[bold green]RECON-X COMMAND CENTER[/bold green]", subtitle="v1.0"))
+    nm = nmap.PortScanner()
+    
+    with Progress() as progress:
+        task = progress.add_task("[cyan]Scanning for CVEs...", total=100)
+        # -sV: Version detection, -F: Fast scan, --script vulners: CVE lookup
+        nm.scan(target, arguments="-sV -F --script vulners")
+        progress.update(task, advance=100)
+
+    for host in nm.all_hosts():
+        table = Table(title=f"Security Report: {host}")
+        table.add_column("Port", style="cyan")
+        table.add_column("Service", style="white")
+        table.add_column("CVE/Vulnerability Status", style="red")
+
+        for proto in nm[host].all_protocols():
+            for port in sorted(nm[host][proto].keys()):
+                info = nm[host][proto][port]
+                vulns = info.get('script', {}).get('vulners', 'Secure')
+                table.add_row(f"{port}/{proto}", f"{info['name']} {info['version']}", vulns[:75] + "...")
+        
+        console.print(table)
+
+if __name__ == "__main__":
+    target = input("Enter Target IP/Domain: ")
+    terminal_scan(target)
