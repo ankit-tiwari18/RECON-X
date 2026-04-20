@@ -16,7 +16,7 @@ def terminal_scan(target):
         # -T4: Aggressive timing (Fast)
         # -n: Skip DNS (Very Fast)
         # --open: Only show ports that are actually open
-        nm.scan(target, arguments="-sV -T4 -n --open -Pn --script vulners")
+        nm.scan(target, arguments="-Pn -sV -T4 -n --open --script vulners")
         progress.update(task, advance=100)
 
     if not nm.all_hosts():
