@@ -12,22 +12,24 @@ def terminal_scan(target):
     
     with Progress() as progress:
         task = progress.add_task("[cyan]Scanning for CVEs...", total=100)
-        
         # -sV: Version detection (MANDATORY for CVEs)
         # -T4: Aggressive timing (Fast)
         # -n: Skip DNS (Very Fast)
         # --open: Only show ports that are actually open
-        # --script vulners: The vulnerability engine
         nm.scan(target, arguments="-sV -T4 -n --open --script vulners")
         progress.update(task, advance=100)
 
+    if not nm.all_hosts():
+        console.print(f"[bold red][!] No response from {target}. Device might be offline.[/bold red]")
+        return
+
     for host in nm.all_hosts():
-        # Check if any ports were found before drawing the table
+        # Check if any ports were found
         if not nm[host].all_protocols():
-            console.print(f"[yellow][!] Host {host} is up, but no open ports were found.[/yellow]")
+            console.print(Panel(f"[yellow]Host {host} is UP but all scanned ports are CLOSED or FILTERED (Firewalled).[/yellow]\n[dim]Try starting a service (like Apache) on the target to see results.[/dim]"))
             continue
 
-        table = Table(title=f"Security Report: {host}")
+        table = Table(title=f"Security Report: {host} ({nm[host].state()})")
         table.add_column("Port", style="cyan")
         table.add_column("Service", style="white")
         table.add_column("CVE/Vulnerability Status", style="red")
@@ -35,9 +37,9 @@ def terminal_scan(target):
         for proto in nm[host].all_protocols():
             for port in sorted(nm[host][proto].keys()):
                 info = nm[host][proto][port]
-                vulns = info.get('script', {}).get('vulners', 'No known CVEs')
+                vulns = info.get('script', {}).get('vulners', 'No known CVEs identified')
                 
-                # Truncate long CVE data so the table doesn't break
+                # Truncate long CVE data for display
                 display_vuln = (vulns[:75] + '...') if len(vulns) > 75 else vulns
                 
                 table.add_row(
